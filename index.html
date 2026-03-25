@@ -702,6 +702,7 @@ async function init() {
   video.playsInline = true;
   const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: 'user' } });
   video.srcObject = stream;
+  await new Promise(r => { video.onloadeddata = r; });
   await video.play();
 
   const wc = document.getElementById('webcamCanvas');
@@ -945,7 +946,13 @@ async function countdown() {
 window.startGame = async function() {
   document.getElementById('startScreen').style.display = 'none';
   document.getElementById('gameContainer').style.display = 'block';
-  await init();
+  try {
+    await init();
+  } catch(e) {
+    console.error('Init failed:', e);
+    alert('Failed to start: ' + e.message + '. Please allow camera access and reload.');
+    return;
+  }
   await countdown();
   round = 0;
   score = 0;
