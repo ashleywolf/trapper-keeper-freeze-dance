@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trapper Keeper Freeze Dance</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #1a0a2e;
+  overflow: hidden;
+  font-family: 'Arial Rounded MT Bold', 'Nunito', Arial, sans-serif;
+  color: #fff;
+  width: 100vw;
+  height: 100vh;
+}
+
+#startScreen {
+  position: absolute; inset: 0; z-index: 100;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #ff00cc, #7b2fbe, #00d4ff, #ff6ec7);
+  background-size: 400% 400%;
+  animation: gradShift 4s ease infinite;
+}
+@keyframes gradShift {
+  0%,100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+#startScreen h1 {
+  font-size: 3.5em;
+  text-shadow: 0 0 20px #ff6ec7, 0 0 40px #7b2fbe, 3px 3px 0 #00d4ff;
+  margin-bottom: 10px;
+  text-align: center;
+  line-height: 1.1;
+}
+#startScreen .subtitle {
+  font-size: 1.2em;
+  opacity: 0.9;
+  margin-bottom: 30px;
+  text-shadow: 0 0 10px #ff6ec7;
+}
+#startScreen button {
+  font-size: 1.5em;
+  padding: 15px 50px;
+  border: 3px solid #fff;
+  border-radius: 50px;
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+  cursor: pointer;
+  text-shadow: 0 0 10px #ff6ec7;
+  transition: all 0.3s;
+}
+#startScreen button:hover {
+  background: rgba(255,255,255,0.35);
+  box-shadow: 0 0 30px #ff6ec7, 0 0 60px #7b2fbe;
+}
+
+#gameContainer {
+  position: relative; width: 100vw; height: 100vh; display: none;
+}
+#webcamCanvas {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+}
+#overlayCanvas {
+  position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none;
+}
+
+#hud {
+  position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
+  z-index: 50; display: flex; gap: 30px; align-items: center;
+}
+.hudBox {
+  background: rgba(0,0,0,0.5);
+  border: 2px solid #ff6ec7;
+  border-radius: 15px;
+  padding: 8px 20px;
+  text-shadow: 0 0 10px #ff6ec7;
+  font-size: 1.1em;
+}
+
+#posePrompt {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  z-index: 60; font-size: 3em; text-align: center;
+  text-shadow: 0 0 30px #ff6ec7, 0 0 60px #7b2fbe;
+  opacity: 0; transition: opacity 0.3s;
+  pointer-events: none;
+}
+
+#freezeFlash {
+  position: absolute; inset: 0; z-index: 55;
+  background: white; opacity: 0; pointer-events: none;
+  transition: opacity 0.1s;
+}
+
+#trapperKeeperPanel {
+  position: absolute; right: 15px; top: 80px; bottom: 15px; width: 220px;
+  z-index: 50;
+  background: linear-gradient(180deg, rgba(123,47,190,0.6), rgba(255,0,204,0.3));
+  border: 3px solid #ff6ec7;
+  border-radius: 20px;
+  padding: 10px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: repeat(4, 1fr);
+  gap: 6px;
+}
+.stickerSlot {
+  border: 2px dashed rgba(255,255,255,0.3);
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+}
+.stickerSlot img {
+  width: 100%; height: 100%; object-fit: cover;
+  border-radius: 8px;
+}
+.stickerSlot .stars {
+  position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%);
+  font-size: 0.6em; text-shadow: 0 0 5px gold;
+}
+
+#collageScreen {
+  position: absolute; inset: 0; z-index: 100;
+  display: none; flex-direction: column; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #ff00cc, #7b2fbe, #00d4ff, #ff6ec7);
+  background-size: 400% 400%;
+  animation: gradShift 4s ease infinite;
+}
+#collageScreen h2 {
+  font-size: 2.5em;
+  text-shadow: 0 0 20px #ff6ec7, 0 0 40px #7b2fbe;
+  margin-bottom: 15px;
+}
+#collageCanvas {
+  border: 5px solid #fff;
+  border-radius: 20px;
+  box-shadow: 0 0 40px #ff6ec7, 0 0 80px #7b2fbe;
+  max-width: 90vw; max-height: 65vh;
+}
+#collageScreen button {
+  margin-top: 20px;
+  font-size: 1.3em;
+  padding: 12px 40px;
+  border: 3px solid #fff;
+  border-radius: 50px;
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+#collageScreen button:hover {
+  background: rgba(255,255,255,0.35);
+  box-shadow: 0 0 30px #ff6ec7;
+}
+
+#countdown {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  z-index: 70; font-size: 8em;
+  text-shadow: 0 0 40px #ff6ec7, 0 0 80px #7b2fbe;
+  opacity: 0; pointer-events: none;
+}
+</style>
+</head>
+<body>
+
+<div id="startScreen">
+  <h1>TRAPPER KEEPER<br>FREEZE DANCE</h1>
+  <div class="subtitle">Dance. Freeze. Become a Lisa Frank sticker.</div>
+  <button onclick="startGame()">START</button>
+</div>
+
+<div id="gameContainer">
+  <canvas id="webcamCanvas"></canvas>
+  <canvas id="overlayCanvas"></canvas>
+  <div id="freezeFlash"></div>
+  <div id="hud">
+    <div class="hudBox" id="roundDisplay">Round 1/8</div>
+    <div class="hudBox" id="scoreDisplay">Score: 0</div>
+    <div class="hudBox" id="phaseDisplay">GET READY</div>
+  </div>
+  <div id="posePrompt"></div>
+  <div id="countdown"></div>
+  <div id="trapperKeeperPanel"></div>
+</div>
+
+<div id="collageScreen">
+  <h2>YOUR TRAPPER KEEPER</h2>
+  <canvas id="collageCanvas"></canvas>
+  <button onclick="downloadCollage()">DOWNLOAD</button>
+  <button onclick="playAgain()" style="margin-left:15px;">PLAY AGAIN</button>
+</div>
+
+<script type="module">
+import { PoseLandmarker, FilesetResolver, DrawingUtils } from
+  "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/vision_bundle.mjs";
+
+const TOTAL_ROUNDS = 8;
+const DANCE_TIME = 6000;
+const FREEZE_HOLD = 2500;
+const COUNTDOWN_TIME = 3;
+
+const POSES = [
+  { name: "DOLPHIN!", desc: "Arch your body, arms back!",
+    check: (l) => {
+      if (!l) return 0;
+      const nose = l[0], lw = l[15], rw = l[16], lh = l[23], rh = l[24];
+      let s = 0;
+      if (lw.y > nose.y) s += 0.3;
+      if (rw.y > nose.y) s += 0.3;
+      const lean = Math.abs(nose.x - (lh.x+rh.x)/2);
+      if (lean > 0.08) s += 0.4;
+      return Math.min(s, 1);
+    }},
+  { name: "UNICORN!", desc: "One arm up as a horn!",
+    check: (l) => {
+      if (!l) return 0;
+      const nose = l[0], lw = l[15], rw = l[16];
+      let s = 0;
+      const leftUp = nose.y - lw.y;
+      const rightUp = nose.y - rw.y;
+      if (leftUp > 0.15 && rightUp < 0.05) s = 0.9;
+      else if (rightUp > 0.15 && leftUp < 0.05) s = 0.9;
+      else if (leftUp > 0.1 || rightUp > 0.1) s = 0.5;
+      return Math.min(s, 1);
+    }},
+  { name: "KITTEN STRETCH!", desc: "Arch back, paws up!",
+    check: (l) => {
+      if (!l) return 0;
+      const lw = l[15], rw = l[16], ls = l[11], rs = l[12];
+      let s = 0;
+      if (lw.y < ls.y) s += 0.4;
+      if (rw.y < rs.y) s += 0.4;
+      const armSpread = Math.abs(lw.x - rw.x);
+      if (armSpread > 0.3) s += 0.2;
+      return Math.min(s, 1);
+    }},
+  { name: "STAR!", desc: "Arms and legs out wide!",
+    check: (l) => {
+      if (!l) return 0;
+      const lw = l[15], rw = l[16], la = l[27], ra = l[28];
+      let s = 0;
+      const armSpread = Math.abs(lw.x - rw.x);
+      const legSpread = Math.abs(la.x - ra.x);
+      if (armSpread > 0.4) s += 0.5;
+      if (legSpread > 0.15) s += 0.5;
+      return Math.min(s, 1);
+    }},
+  { name: "PUPPY BEG!", desc: "Hands up like paws!",
+    check: (l) => {
+      if (!l) return 0;
+      const nose = l[0], lw = l[15], rw = l[16], le = l[13], re = l[14];
+      let s = 0;
+      if (lw.y < le.y && lw.y > nose.y) s += 0.35;
+      if (rw.y < re.y && rw.y > nose.y) s += 0.35;
+      const pawClose = Math.abs(lw.x - rw.x);
+      if (pawClose < 0.25) s += 0.3;
+      return Math.min(s, 1);
+    }},
+  { name: "RAINBOW!", desc: "Big arc with both arms!",
+    check: (l) => {
+      if (!l) return 0;
+      const nose = l[0], lw = l[15], rw = l[16];
+      let s = 0;
+      if (lw.y < nose.y && rw.y < nose.y) s += 0.5;
+      const armSpread = Math.abs(lw.x - rw.x);
+      if (armSpread > 0.35) s += 0.5;
+      return Math.min(s, 1);
+    }},
+  { name: "BUTTERFLY!", desc: "Flap your arms!",
+    check: (l) => {
+      if (!l) return 0;
+      const ls = l[11], rs = l[12], lw = l[15], rw = l[16];
+      let s = 0;
+      const lArmAngle = Math.abs(lw.y - ls.y);
+      const rArmAngle = Math.abs(rw.y - rs.y);
+      if (lArmAngle < 0.15) s += 0.3;
+      if (rArmAngle < 0.15) s += 0.3;
+      const spread = Math.abs(lw.x - rw.x);
+      if (spread > 0.4) s += 0.4;
+      return Math.min(s, 1);
+    }},
+  { name: "MERMAID!", desc: "Hands together, sway!",
+    check: (l) => {
+      if (!l) return 0;
+      const lw = l[15], rw = l[16], nose = l[0];
+      let s = 0;
+      const handDist = Math.hypot(lw.x - rw.x, lw.y - rw.y);
+      if (handDist < 0.1) s += 0.5;
+      if (lw.y < nose.y) s += 0.3;
+      const tilt = Math.abs(nose.x - 0.5);
+      if (tilt > 0.05) s += 0.2;
+      return Math.min(s, 1);
+    }}
+];
+
+const BORDER_COLORS = [
+  ['#ff6ec7','#ff00cc','#ff69b4'],
+  ['#00d4ff','#7b2fbe','#00ffcc'],
+  ['#ffaa00','#ff6ec7','#ff0066'],
+  ['#00ff88','#00d4ff','#7b2fbe'],
+  ['#ff0066','#ffaa00','#ffe600'],
+  ['#7b2fbe','#ff00cc','#00d4ff'],
+  ['#ff69b4','#ffe600','#00ff88'],
+  ['#00ffcc','#ff6ec7','#7b2fbe']
+];
+
+const BORDER_SHAPES = ['heart','star','circle','diamond','heart','star','circle','diamond'];
+
+let poseLandmarker;
+let video;
+let webcamCtx, overlayCtx;
+let currentLandmarks = null;
+let prevFrameData = null;
+let motionLevel = 0;
+let round = 0;
+let score = 0;
+let phase = 'idle';
+let stickerImages = [];
+let stickerScores = [];
+let animFrame;
+let audioCtx;
+let musicGain;
+let musicPlaying = false;
+
+// Synthwave oscillator music
+function startMusic() {
+  if (musicPlaying) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  musicGain = audioCtx.createGain();
+  musicGain.gain.value = 0.12;
+  musicGain.connect(audioCtx.destination);
+
+  const bassNotes = [110, 130.81, 146.83, 164.81, 110, 130.81, 146.83, 130.81];
+  const leadNotes = [440, 523.25, 587.33, 659.25, 587.33, 523.25, 440, 392];
+  const beatLen = 0.25;
+
+  function scheduleLoop(startTime) {
+    for (let i = 0; i < bassNotes.length; i++) {
+      const t = startTime + i * beatLen;
+      // Bass
+      const bass = audioCtx.createOscillator();
+      const bassG = audioCtx.createGain();
+      bass.type = 'sawtooth';
+      bass.frequency.value = bassNotes[i];
+      bassG.gain.setValueAtTime(0.15, t);
+      bassG.gain.exponentialRampToValueAtTime(0.01, t + beatLen * 0.9);
+      bass.connect(bassG);
+      bassG.connect(musicGain);
+      bass.start(t);
+      bass.stop(t + beatLen);
+      // Lead
+      const lead = audioCtx.createOscillator();
+      const leadG = audioCtx.createGain();
+      lead.type = 'square';
+      lead.frequency.value = leadNotes[i];
+      leadG.gain.setValueAtTime(0.08, t);
+      leadG.gain.exponentialRampToValueAtTime(0.01, t + beatLen * 0.8);
+      lead.connect(leadG);
+      leadG.connect(musicGain);
+      lead.start(t);
+      lead.stop(t + beatLen);
+      // Hi-hat
+      if (i % 2 === 0) {
+        const noise = audioCtx.createOscillator();
+        const nG = audioCtx.createGain();
+        noise.type = 'square';
+        noise.frequency.value = 3000 + Math.random() * 2000;
+        nG.gain.setValueAtTime(0.04, t);
+        nG.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+        noise.connect(nG);
+        nG.connect(musicGain);
+        noise.start(t);
+        noise.stop(t + 0.06);
+      }
+    }
+    const loopLen = bassNotes.length * beatLen;
+    setTimeout(() => { if (musicPlaying) scheduleLoop(audioCtx.currentTime + 0.05); }, (loopLen - 0.1) * 1000);
+  }
+  musicPlaying = true;
+  scheduleLoop(audioCtx.currentTime + 0.1);
+}
+
+function stopMusic() {
+  musicPlaying = false;
+  if (musicGain) musicGain.gain.value = 0;
+}
+
+function playSound(type) {
+  if (!audioCtx) return;
+  const now = audioCtx.currentTime;
+  if (type === 'freeze') {
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(880, now);
+    o.frequency.exponentialRampToValueAtTime(1760, now + 0.15);
+    g.gain.setValueAtTime(0.3, now);
+    g.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(now); o.stop(now + 0.4);
+  } else if (type === 'peel') {
+    for (let i = 0; i < 5; i++) {
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = 'sine';
+      o.frequency.value = 600 + i * 200;
+      g.gain.setValueAtTime(0.1, now + i * 0.06);
+      g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.06 + 0.15);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(now + i * 0.06); o.stop(now + i * 0.06 + 0.2);
+    }
+  } else if (type === 'score') {
+    [523.25, 659.25, 783.99].forEach((f, i) => {
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = 'triangle';
+      o.frequency.value = f;
+      g.gain.setValueAtTime(0.15, now + i * 0.12);
+      g.gain.exponentialRampToValueAtTime(0.01, now + i * 0.12 + 0.2);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(now + i * 0.12); o.stop(now + i * 0.12 + 0.25);
+    });
+  }
+}
+
+// Sparkle particles
+const sparkles = [];
+function spawnSparkles(x, y, count, colors) {
+  for (let i = 0; i < count; i++) {
+    sparkles.push({
+      x, y,
+      vx: (Math.random() - 0.5) * 8,
+      vy: (Math.random() - 0.5) * 8 - 2,
+      life: 1,
+      decay: 0.01 + Math.random() * 0.02,
+      size: 2 + Math.random() * 4,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      type: Math.random() > 0.5 ? 'star' : 'circle'
+    });
+  }
+}
+
+function updateSparkles(ctx) {
+  for (let i = sparkles.length - 1; i >= 0; i--) {
+    const s = sparkles[i];
+    s.x += s.vx;
+    s.y += s.vy;
+    s.vy += 0.1;
+    s.life -= s.decay;
+    if (s.life <= 0) { sparkles.splice(i, 1); continue; }
+    ctx.globalAlpha = s.life;
+    ctx.fillStyle = s.color;
+    if (s.type === 'star') {
+      drawStar(ctx, s.x, s.y, s.size);
+    } else {
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawStar(ctx, cx, cy, r) {
+  ctx.beginPath();
+  for (let i = 0; i < 5; i++) {
+    const a = (i * 4 * Math.PI / 5) - Math.PI / 2;
+    const method = i === 0 ? 'moveTo' : 'lineTo';
+    ctx[method](cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+    const a2 = a + 2 * Math.PI / 5;
+    ctx.lineTo(cx + Math.cos(a2) * r * 0.4, cy + Math.sin(a2) * r * 0.4);
+  }
+  ctx.closePath();
+  ctx.fill();
+}
+
+// Lisa Frank filter pipeline
+function lisaFrankify(imageData, borderIdx) {
+  const d = imageData.data;
+  const colors = BORDER_COLORS[borderIdx] || BORDER_COLORS[0];
+  // Posterize to neon
+  for (let i = 0; i < d.length; i += 4) {
+    let r = d[i], g = d[i+1], b = d[i+2];
+    // Boost saturation
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    const mid = (max + min) / 2;
+    r = Math.min(255, r + (r - mid) * 0.8);
+    g = Math.min(255, g + (g - mid) * 0.8);
+    b = Math.min(255, b + (b - mid) * 0.8);
+    // Posterize to 5 levels
+    r = Math.round(r / 51) * 51;
+    g = Math.round(g / 51) * 51;
+    b = Math.round(b / 51) * 51;
+    // Hue shift toward neon
+    const hueShift = borderIdx * 45;
+    const [h, s, l] = rgbToHsl(r, g, b);
+    const [nr, ng, nb] = hslToRgb((h + hueShift / 360) % 1, Math.min(1, s * 1.5), l);
+    d[i] = nr;
+    d[i+1] = ng;
+    d[i+2] = nb;
+  }
+  return imageData;
+}
+
+function rgbToHsl(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h, s, l = (max + min) / 2;
+  if (max === min) { h = s = 0; }
+  else {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+    else if (max === g) h = ((b - r) / d + 2) / 6;
+    else h = ((r - g) / d + 4) / 6;
+  }
+  return [h, s, l];
+}
+
+function hslToRgb(h, s, l) {
+  let r, g, b;
+  if (s === 0) { r = g = b = l; }
+  else {
+    const hue2rgb = (p, q, t) => {
+      if (t < 0) t += 1; if (t > 1) t -= 1;
+      if (t < 1/6) return p + (q - p) * 6 * t;
+      if (t < 1/2) return q;
+      if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+      return p;
+    };
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    r = hue2rgb(p, q, h + 1/3);
+    g = hue2rgb(p, q, h);
+    b = hue2rgb(p, q, h - 1/3);
+  }
+  return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+}
+
+// Edge detection for sticker outline
+function sobelEdge(imageData, color) {
+  const w = imageData.width, h = imageData.height;
+  const src = imageData.data;
+  const out = new Uint8ClampedArray(src.length);
+  const gray = new Float32Array(w * h);
+  for (let i = 0; i < w * h; i++) {
+    const j = i * 4;
+    gray[i] = src[j] * 0.299 + src[j+1] * 0.587 + src[j+2] * 0.114;
+  }
+  const cr = parseInt(color.slice(1,3),16);
+  const cg = parseInt(color.slice(3,5),16);
+  const cb = parseInt(color.slice(5,7),16);
+  for (let y = 1; y < h-1; y++) {
+    for (let x = 1; x < w-1; x++) {
+      const idx = y * w + x;
+      const gx = -gray[idx-w-1] + gray[idx-w+1] - 2*gray[idx-1] + 2*gray[idx+1] - gray[idx+w-1] + gray[idx+w+1];
+      const gy = -gray[idx-w-1] - 2*gray[idx-w] - gray[idx-w+1] + gray[idx+w-1] + 2*gray[idx+w] + gray[idx+w+1];
+      const mag = Math.min(255, Math.sqrt(gx*gx + gy*gy));
+      const j = idx * 4;
+      if (mag > 40) {
+        out[j] = cr; out[j+1] = cg; out[j+2] = cb; out[j+3] = 255;
+      } else {
+        out[j] = src[j]; out[j+1] = src[j+1]; out[j+2] = src[j+2]; out[j+3] = src[j+3];
+      }
+    }
+  }
+  return new ImageData(out, w, h);
+}
+
+// Create sticker with border
+function createSticker(sourceCanvas, roundIdx) {
+  const size = 300;
+  const c = document.createElement('canvas');
+  c.width = size; c.height = size;
+  const ctx = c.getContext('2d');
+
+  const colors = BORDER_COLORS[roundIdx];
+  // Draw holographic border
+  const grad = ctx.createLinearGradient(0, 0, size, size);
+  grad.addColorStop(0, colors[0]);
+  grad.addColorStop(0.5, colors[1]);
+  grad.addColorStop(1, colors[2]);
+
+  // Border shape
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  const shape = BORDER_SHAPES[roundIdx];
+  if (shape === 'heart') {
+    drawHeartPath(ctx, size/2, size/2, size * 0.45);
+  } else if (shape === 'star') {
+    drawStarPath(ctx, size/2, size/2, size * 0.48, size * 0.25, 5);
+  } else if (shape === 'diamond') {
+    ctx.moveTo(size/2, 10); ctx.lineTo(size-10, size/2);
+    ctx.lineTo(size/2, size-10); ctx.lineTo(10, size/2);
+    ctx.closePath();
+  } else {
+    ctx.arc(size/2, size/2, size/2 - 5, 0, Math.PI * 2);
+  }
+  ctx.fill();
+
+  // Clip inner area for the photo
+  ctx.save();
+  ctx.beginPath();
+  const inset = 15;
+  if (shape === 'heart') {
+    drawHeartPath(ctx, size/2, size/2, size * 0.38);
+  } else if (shape === 'star') {
+    drawStarPath(ctx, size/2, size/2, size * 0.4, size * 0.2, 5);
+  } else if (shape === 'diamond') {
+    ctx.moveTo(size/2, 10+inset); ctx.lineTo(size-10-inset, size/2);
+    ctx.lineTo(size/2, size-10-inset); ctx.lineTo(10+inset, size/2);
+    ctx.closePath();
+  } else {
+    ctx.arc(size/2, size/2, size/2 - 5 - inset, 0, Math.PI * 2);
+  }
+  ctx.clip();
+
+  // Draw the captured frame (Lisa-Frankified)
+  const tempC = document.createElement('canvas');
+  tempC.width = sourceCanvas.width;
+  tempC.height = sourceCanvas.height;
+  const tempCtx = tempC.getContext('2d');
+  tempCtx.drawImage(sourceCanvas, 0, 0);
+  let imgData = tempCtx.getImageData(0, 0, tempC.width, tempC.height);
+  imgData = lisaFrankify(imgData, roundIdx);
+  imgData = sobelEdge(imgData, colors[0]);
+  tempCtx.putImageData(imgData, 0, 0);
+
+  // Scale and center
+  const scale = Math.max(size / tempC.width, size / tempC.height);
+  const sw = tempC.width * scale;
+  const sh = tempC.height * scale;
+  ctx.drawImage(tempC, (size - sw)/2, (size - sh)/2, sw, sh);
+  ctx.restore();
+
+  // Sparkle accents on border
+  for (let i = 0; i < 12; i++) {
+    const angle = (i / 12) * Math.PI * 2;
+    const r = size * 0.44;
+    const sx = size/2 + Math.cos(angle) * r;
+    const sy = size/2 + Math.sin(angle) * r;
+    ctx.fillStyle = '#fff';
+    ctx.globalAlpha = 0.7 + Math.random() * 0.3;
+    drawStar(ctx, sx, sy, 3 + Math.random() * 4);
+  }
+  ctx.globalAlpha = 1;
+
+  return c.toDataURL('image/png');
+}
+
+function drawHeartPath(ctx, cx, cy, size) {
+  ctx.moveTo(cx, cy + size * 0.4);
+  ctx.bezierCurveTo(cx - size, cy - size * 0.2, cx - size * 0.5, cy - size, cx, cy - size * 0.4);
+  ctx.bezierCurveTo(cx + size * 0.5, cy - size, cx + size, cy - size * 0.2, cx, cy + size * 0.4);
+}
+
+function drawStarPath(ctx, cx, cy, outerR, innerR, points) {
+  for (let i = 0; i < points * 2; i++) {
+    const r = i % 2 === 0 ? outerR : innerR;
+    const a = (i * Math.PI / points) - Math.PI / 2;
+    if (i === 0) ctx.moveTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+    else ctx.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+  }
+  ctx.closePath();
+}
+
+// Motion detection
+function detectMotion(ctx, w, h) {
+  const current = ctx.getImageData(0, 0, w, h);
+  if (!prevFrameData) {
+    prevFrameData = current.data.slice();
+    return 0;
+  }
+  let diff = 0;
+  const step = 16;
+  for (let i = 0; i < current.data.length; i += step * 4) {
+    diff += Math.abs(current.data[i] - prevFrameData[i]);
+    diff += Math.abs(current.data[i+1] - prevFrameData[i+1]);
+    diff += Math.abs(current.data[i+2] - prevFrameData[i+2]);
+  }
+  prevFrameData = current.data.slice();
+  const pixels = current.data.length / (step * 4);
+  return diff / (pixels * 765);
+}
+
+// Init
+async function init() {
+  const vision = await FilesetResolver.forVisionTasks(
+    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/wasm"
+  );
+  poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
+    baseOptions: {
+      modelAssetPath: "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
+      delegate: "GPU"
+    },
+    runningMode: "VIDEO",
+    numPoses: 1
+  });
+
+  video = document.createElement('video');
+  video.playsInline = true;
+  const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: 'user' } });
+  video.srcObject = stream;
+  await video.play();
+
+  const wc = document.getElementById('webcamCanvas');
+  const oc = document.getElementById('overlayCanvas');
+  wc.width = video.videoWidth;
+  wc.height = video.videoHeight;
+  oc.width = wc.width;
+  oc.height = wc.height;
+  webcamCtx = wc.getContext('2d', { willReadFrequently: true });
+  overlayCtx = oc.getContext('2d');
+
+  // Build sticker slots
+  const panel = document.getElementById('trapperKeeperPanel');
+  for (let i = 0; i < TOTAL_ROUNDS; i++) {
+    const slot = document.createElement('div');
+    slot.className = 'stickerSlot';
+    slot.id = 'slot' + i;
+    panel.appendChild(slot);
+  }
+
+  renderLoop();
+}
+
+let lastTime = 0;
+function renderLoop() {
+  animFrame = requestAnimationFrame(renderLoop);
+  const now = performance.now();
+  if (now - lastTime < 33) return;
+  lastTime = now;
+
+  // Draw mirrored webcam
+  webcamCtx.save();
+  webcamCtx.translate(webcamCtx.canvas.width, 0);
+  webcamCtx.scale(-1, 1);
+  webcamCtx.drawImage(video, 0, 0);
+  webcamCtx.restore();
+
+  // Pose detection
+  const result = poseLandmarker.detectForVideo(video, now);
+  if (result.landmarks && result.landmarks.length > 0) {
+    currentLandmarks = result.landmarks[0];
+  }
+
+  // Motion
+  motionLevel = detectMotion(webcamCtx, webcamCtx.canvas.width, webcamCtx.canvas.height);
+
+  // Overlay effects
+  overlayCtx.clearRect(0, 0, overlayCtx.canvas.width, overlayCtx.canvas.height);
+
+  // Dancing sparkle trail
+  if (phase === 'dancing' && motionLevel > 0.05) {
+    const cx = overlayCtx.canvas.width / 2;
+    const cy = overlayCtx.canvas.height / 2;
+    spawnSparkles(
+      cx + (Math.random()-0.5) * overlayCtx.canvas.width * 0.8,
+      cy + (Math.random()-0.5) * overlayCtx.canvas.height * 0.8,
+      3, ['#ff6ec7','#00d4ff','#ffe600','#ff00cc','#00ff88']
+    );
+  }
+
+  updateSparkles(overlayCtx);
+
+  // Rainbow border when dancing
+  if (phase === 'dancing') {
+    const t = now / 1000;
+    overlayCtx.save();
+    overlayCtx.lineWidth = 6;
+    const w = overlayCtx.canvas.width, h = overlayCtx.canvas.height;
+    const bGrad = overlayCtx.createLinearGradient(0, 0, w, h);
+    bGrad.addColorStop((Math.sin(t) + 1) / 2 * 0.3, '#ff00cc');
+    bGrad.addColorStop(0.5, '#00d4ff');
+    bGrad.addColorStop(1 - (Math.sin(t) + 1) / 2 * 0.3, '#ff6ec7');
+    overlayCtx.strokeStyle = bGrad;
+    overlayCtx.strokeRect(3, 3, w - 6, h - 6);
+    overlayCtx.restore();
+  }
+}
+
+// Game flow
+let currentPose;
+
+async function runRound() {
+  const roundDisplay = document.getElementById('roundDisplay');
+  const phaseDisplay = document.getElementById('phaseDisplay');
+  const posePrompt = document.getElementById('posePrompt');
+
+  roundDisplay.textContent = `Round ${round + 1}/${TOTAL_ROUNDS}`;
+
+  // Pick a pose
+  currentPose = POSES[round % POSES.length];
+
+  // Show pose prompt
+  phaseDisplay.textContent = 'DANCE!';
+  phase = 'dancing';
+  startMusic();
+
+  // Show pose coming up
+  await delay(DANCE_TIME - 2000);
+  posePrompt.textContent = currentPose.name + '\n' + currentPose.desc;
+  posePrompt.style.opacity = '1';
+
+  await delay(1500);
+
+  // FREEZE
+  phase = 'frozen';
+  stopMusic();
+  playSound('freeze');
+  phaseDisplay.textContent = 'FREEZE!';
+  posePrompt.style.opacity = '0';
+  document.getElementById('freezeFlash').style.opacity = '0.8';
+  await delay(100);
+  document.getElementById('freezeFlash').style.opacity = '0';
+
+  // Hold and score
+  await delay(FREEZE_HOLD);
+
+  // Evaluate pose
+  let poseScore = currentPose.check(currentLandmarks);
+  let stars = Math.max(1, Math.min(5, Math.round(poseScore * 5)));
+  score += stars;
+  document.getElementById('scoreDisplay').textContent = `Score: ${score}`;
+
+  // Capture sticker
+  playSound('peel');
+  const stickerDataUrl = createSticker(document.getElementById('webcamCanvas'), round);
+  stickerImages.push(stickerDataUrl);
+  stickerScores.push(stars);
+
+  // Place in panel
+  const slot = document.getElementById('slot' + round);
+  const img = document.createElement('img');
+  img.src = stickerDataUrl;
+  slot.appendChild(img);
+  const starsDiv = document.createElement('div');
+  starsDiv.className = 'stars';
+  starsDiv.textContent = '\u2B50'.repeat(stars);
+  slot.appendChild(starsDiv);
+
+  // Spawn celebration sparkles
+  const rect = slot.getBoundingClientRect();
+  spawnSparkles(rect.left + rect.width/2, rect.top + rect.height/2, 30,
+    BORDER_COLORS[round]);
+
+  playSound('score');
+  phaseDisplay.textContent = `${stars} STARS!`;
+  await delay(1500);
+
+  round++;
+  if (round < TOTAL_ROUNDS) {
+    runRound();
+  } else {
+    showCollage();
+  }
+}
+
+function showCollage() {
+  phase = 'done';
+  document.getElementById('gameContainer').style.display = 'none';
+  const screen = document.getElementById('collageScreen');
+  screen.style.display = 'flex';
+
+  const cc = document.getElementById('collageCanvas');
+  const cols = 4, rows = 2;
+  const stickerSize = 250;
+  const padding = 20;
+  cc.width = cols * stickerSize + (cols + 1) * padding;
+  cc.height = rows * stickerSize + (rows + 1) * padding + 80;
+  const ctx = cc.getContext('2d');
+
+  // Background - trapper keeper gradient
+  const bg = ctx.createLinearGradient(0, 0, cc.width, cc.height);
+  bg.addColorStop(0, '#2a0845');
+  bg.addColorStop(0.3, '#6441A5');
+  bg.addColorStop(0.6, '#ff00cc');
+  bg.addColorStop(1, '#00d4ff');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, cc.width, cc.height);
+
+  // Title
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 36px Arial';
+  ctx.textAlign = 'center';
+  ctx.shadowColor = '#ff6ec7';
+  ctx.shadowBlur = 20;
+  ctx.fillText('TRAPPER KEEPER FREEZE DANCE', cc.width/2, 50);
+  ctx.shadowBlur = 0;
+
+  // Score
+  ctx.font = '20px Arial';
+  ctx.fillText(`Total: ${score} stars out of ${TOTAL_ROUNDS * 5}`, cc.width/2, cc.height - 15);
+
+  // Place stickers
+  let loaded = 0;
+  stickerImages.forEach((src, i) => {
+    const img = new Image();
+    img.onload = () => {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const x = padding + col * (stickerSize + padding);
+      const y = 80 + row * (stickerSize + padding);
+      ctx.drawImage(img, x, y, stickerSize, stickerSize);
+      // Stars
+      ctx.fillStyle = '#fff';
+      ctx.font = '16px Arial';
+      ctx.textAlign = 'center';
+      ctx.shadowColor = 'gold';
+      ctx.shadowBlur = 10;
+      ctx.fillText('\u2B50'.repeat(stickerScores[i]), x + stickerSize/2, y + stickerSize + 18);
+      ctx.shadowBlur = 0;
+      loaded++;
+    };
+    img.src = src;
+  });
+}
+
+function downloadCollage() {
+  const cc = document.getElementById('collageCanvas');
+  const link = document.createElement('a');
+  link.download = 'trapper-keeper-freeze-dance.png';
+  link.href = cc.toDataURL('image/png');
+  link.click();
+}
+
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function countdown() {
+  const el = document.getElementById('countdown');
+  for (let i = COUNTDOWN_TIME; i > 0; i--) {
+    el.textContent = i;
+    el.style.opacity = '1';
+    await delay(800);
+    el.style.opacity = '0';
+    await delay(200);
+  }
+  el.textContent = 'DANCE!';
+  el.style.opacity = '1';
+  await delay(600);
+  el.style.opacity = '0';
+}
+
+window.startGame = async function() {
+  document.getElementById('startScreen').style.display = 'none';
+  document.getElementById('gameContainer').style.display = 'block';
+  await init();
+  await countdown();
+  round = 0;
+  score = 0;
+  stickerImages = [];
+  stickerScores = [];
+  runRound();
+};
+
+window.playAgain = function() {
+  document.getElementById('collageScreen').style.display = 'none';
+  document.getElementById('gameContainer').style.display = 'block';
+  document.getElementById('trapperKeeperPanel').innerHTML = '';
+  for (let i = 0; i < TOTAL_ROUNDS; i++) {
+    const slot = document.createElement('div');
+    slot.className = 'stickerSlot';
+    slot.id = 'slot' + i;
+    document.getElementById('trapperKeeperPanel').appendChild(slot);
+  }
+  countdown().then(() => {
+    round = 0; score = 0;
+    stickerImages = []; stickerScores = [];
+    runRound();
+  });
+};
+
+window.downloadCollage = downloadCollage;
+</script>
+</body>
+</html>
