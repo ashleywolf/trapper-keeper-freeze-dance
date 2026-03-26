@@ -84,6 +84,7 @@ body {
   text-shadow: 0 0 30px #ff6ec7, 0 0 60px #7b2fbe;
   opacity: 0; transition: opacity 0.3s;
   pointer-events: none;
+  white-space: pre-line;
 }
 
 #freezeFlash {
@@ -192,7 +193,7 @@ body {
 </div>
 
 <script type="module">
-import { PoseLandmarker, FilesetResolver, DrawingUtils } from
+import { PoseLandmarker, FilesetResolver } from
   "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/vision_bundle.mjs";
 
 const TOTAL_ROUNDS = 8;
@@ -327,6 +328,7 @@ let musicPlaying = false;
 function startMusic() {
   if (musicPlaying) return;
   audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
   musicGain = audioCtx.createGain();
   musicGain.gain.value = 0.12;
   musicGain.connect(audioCtx.destination);
@@ -734,6 +736,7 @@ function renderLoop() {
   lastTime = now;
 
   // Draw mirrored webcam
+  if (!video || video.readyState < 2) return;
   webcamCtx.save();
   webcamCtx.translate(webcamCtx.canvas.width, 0);
   webcamCtx.scale(-1, 1);
@@ -741,10 +744,12 @@ function renderLoop() {
   webcamCtx.restore();
 
   // Pose detection
-  const result = poseLandmarker.detectForVideo(video, now);
-  if (result.landmarks && result.landmarks.length > 0) {
-    currentLandmarks = result.landmarks[0];
-  }
+  try {
+    const result = poseLandmarker.detectForVideo(video, now);
+    if (result.landmarks && result.landmarks.length > 0) {
+      currentLandmarks = result.landmarks[0];
+    }
+  } catch(e) { /* skip frame */ }
 
   // Motion
   motionLevel = detectMotion(webcamCtx, webcamCtx.canvas.width, webcamCtx.canvas.height);
@@ -841,9 +846,12 @@ async function runRound() {
   starsDiv.textContent = '\u2B50'.repeat(stars);
   slot.appendChild(starsDiv);
 
-  // Spawn celebration sparkles
+  // Spawn celebration sparkles (convert screen coords to canvas coords)
   const rect = slot.getBoundingClientRect();
-  spawnSparkles(rect.left + rect.width/2, rect.top + rect.height/2, 30,
+  const oc = document.getElementById('overlayCanvas');
+  const sparkleX = (rect.left + rect.width/2) / window.innerWidth * oc.width;
+  const sparkleY = (rect.top + rect.height/2) / window.innerHeight * oc.height;
+  spawnSparkles(sparkleX, sparkleY, 30,
     BORDER_COLORS[round]);
 
   playSound('score');
@@ -951,6 +959,8 @@ window.startGame = async function() {
   } catch(e) {
     console.error('Init failed:', e);
     alert('Failed to start: ' + e.message + '. Please allow camera access and reload.');
+    document.getElementById('gameContainer').style.display = 'none';
+    document.getElementById('startScreen').style.display = 'flex';
     return;
   }
   await countdown();
@@ -965,6 +975,10 @@ window.playAgain = function() {
   document.getElementById('collageScreen').style.display = 'none';
   document.getElementById('gameContainer').style.display = 'block';
   document.getElementById('trapperKeeperPanel').innerHTML = '';
+  document.getElementById('scoreDisplay').textContent = 'Score: 0';
+  document.getElementById('roundDisplay').textContent = 'Round 1/' + TOTAL_ROUNDS;
+  document.getElementById('phaseDisplay').textContent = 'GET READY';
+  phase = 'idle';
   for (let i = 0; i < TOTAL_ROUNDS; i++) {
     const slot = document.createElement('div');
     slot.className = 'stickerSlot';
